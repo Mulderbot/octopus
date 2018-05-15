@@ -18,335 +18,345 @@ import urllib.parse
 
 
 class libwebdata:
-	def __init__(self):
-		self.publickey_file = "public_key.pub"
-		self.privatekey_file = "private_key.pem"
+    def __init__(self):
+        self.publickey_file = "public_key.pub"
+        self.privatekey_file = "private_key.pem"
 
-		return
+        return
 
 
-	### ENCRYPT AND HASH FUNCTIONS ###
+    ### ENCRYPT AND HASH FUNCTIONS ###
 
-	# -- create a salted hash for a word --
-	def salted_hash(self, word):
-		salt = base64.urlsafe_b64encode(uuid.uuid4().bytes)
-		dsalt = salt.decode()
+    # -- create a salted hash for a word --
+    def salted_hash(self, word):
+        salt = base64.urlsafe_b64encode(uuid.uuid4().bytes)
+        dsalt = salt.decode()
 
-		salt_comb = (word+dsalt).encode('utf-8')
+        salt_comb = (word+dsalt).encode('utf-8')
 
-		hashed_w = hashlib.sha256(salt_comb).digest()
-		hashed_word = base64.urlsafe_b64encode(hashed_w)
+        hashed_w = hashlib.sha256(salt_comb).digest()
+        hashed_word = base64.urlsafe_b64encode(hashed_w)
 
-		return hashed_word
+        return hashed_word
 
 
-	# -- encrypt a word --
-	def encrypt_word(self, word):
-		fp = open(self.publickey_file, "r")
-		publickey = RSA.importKey(fp.read())
-		fp.close()
+    # -- encrypt a word --
+    def encrypt_word(self, word):
+        fp = open(self.publickey_file, "r")
+        publickey = RSA.importKey(fp.read())
+        fp.close()
 
-		encrypted_word = publickey.encrypt(word.encode('utf-8'), 32)[0]
-		encoded_encrypted_word = base64.b64encode(encrypted_word)
+        encrypted_word = publickey.encrypt(word.encode('utf-8'), 32)[0]
+        encoded_encrypted_word = base64.b64encode(encrypted_word)
 
-		return encoded_encrypted_word
+        return encoded_encrypted_word
 
 
-	# -- decrypt a word --
-	def decrypt_word(self, enc_word):
-		fp = open(self.privatekey_file, "r")
-		privatekey = RSA.importKey(fp.read())
-		fp.close()
+    # -- decrypt a word --
+    def decrypt_word(self, enc_word):
+        fp = open(self.privatekey_file, "r")
+        privatekey = RSA.importKey(fp.read())
+        fp.close()
 
-		decoded_encrypted_word = base64.b64decode(enc_word)
-		decrypted_word = privatekey.decrypt(decoded_encrypted_word)
+        decoded_encrypted_word = base64.b64decode(enc_word)
+        decrypted_word = privatekey.decrypt(decoded_encrypted_word)
 
-		return decrypted_word
+        return decrypted_word
 
 
-	### DATABASE FUNCTIONS ###
+    ### DATABASE FUNCTIONS ###
 
-	# -- open database --
-	def open_db(self):
-		bbdd = pymysql.connect(host = "localhost", user = "juanlu",
-					passwd = "", db = "octopus", 
-					use_unicode=True, charset="utf8")
-		sql = bbdd.cursor()
+    # -- open database --
+    def open_db(self):
+        bbdd = pymysql.connect(host = "localhost", user = "juanlu",
+                    passwd = "", db = "octopus", 
+                    use_unicode=True, charset="utf8")
+        sql = bbdd.cursor()
 
-		return bbdd, sql
+        return bbdd, sql
 
 
-	# -- insert into table --
-	def insert_table(self, data, table):
-		bbdd, sql = self.open_db()
+    # -- insert into table --
+    def insert_table(self, data, table):
+        bbdd, sql = self.open_db()
 
-		for i in data:
-			query = ("INSERT INTO {0} (").format(table)
-			for n in i.keys():
-				query += n+","
-			query = query[0:-1]
+        for i in data:
+            query = ("INSERT INTO {0} (").format(table)
+            for n in i.keys():
+                query += n+","
+            query = query[0:-1]
 
-			query += ") VALUES ("
+            query += ") VALUES ("
 
-			for n in i.keys():
-				query += "'"+str(i[n])+"',"
-			query = query[0:-1]
+            for n in i.keys():
+                query += "'"+str(i[n])+"',"
+            query = query[0:-1]
 
-			query += ");"
-			print(query)
-			sql.execute(query)
+            query += ");"
+            print(query)
+            sql.execute(query)
 
-		bbdd.commit()
+        bbdd.commit()
 
-		bbdd.close()
+        bbdd.close()
 
-		return
+        return
 
 
-	# -- update word --
-	def update_word(self, encrypted_word):
-		bbdd, sql = self.open_db()
+    # -- update word --
+    def update_word(self, encrypted_word):
+        bbdd, sql = self.open_db()
 
-		query = ("""UPDATE top_words SET count = count + 1 
-			WHERE encrypted_word='{0}';""").format(encrypted_word)
-		print(query)
-		sql.execute(query)
-		bbdd.commit()
+        query = ("""UPDATE top_words SET count = count + 1 
+            WHERE encrypted_word='{0}';""").format(encrypted_word)
+        print(query)
+        sql.execute(query)
+        bbdd.commit()
 
-		bbdd.close()
+        bbdd.close()
 
-		return
+        return
 
 
-	# -- update sentiment --
-	def update_sentiment(self, sentiment, url):
-		bbdd, sql = self.open_db()
+    # -- update sentiment --
+    def update_sentiment(self, sentiment, url):
+        bbdd, sql = self.open_db()
 
-		query = ("""UPDATE sentiment SET sentiment={0} 
-			WHERE encrypted_word='{1}';""").format(sentiment, url)
-		print(query)
-		sql.execute(query)
-		bbdd.commit()
+        query = ("""UPDATE sentiment SET sentiment={0} 
+            WHERE encrypted_word='{1}';""").format(sentiment, url)
+        print(query)
+        sql.execute(query)
+        bbdd.commit()
 
-		bbdd.close()
+        bbdd.close()
 
-		return
+        return
 
 
-	# -- get word from top words --
-	def get_word(self, encrypted_word):
-		bbdd, sql = self.open_db()
+    # -- get word from top words --
+    def get_word(self, encrypted_word):
+        bbdd, sql = self.open_db()
 
-		query = ("""SELECT * FROM top_words 
-			WHERE encrypted_word='{0}';""").format(encrypted_word)
-		print(query)
-		sql.execute(query)
-		tuplas = sql.fetchall()
+        query = ("""SELECT * FROM top_words 
+            WHERE encrypted_word='{0}';""").format(encrypted_word)
+        print(query)
+        sql.execute(query)
+        tuplas = sql.fetchall()
 
-		bbdd.close()
+        bbdd.close()
 
-		return tuplas
+        return tuplas
 
 
-	# -- get url from sentiment --
-	def get_url(self, url):
-		bbdd, sql = self.open_db()
+    # -- get url from sentiment --
+    def get_url(self, url):
+        bbdd, sql = self.open_db()
 
-		query = ("""SELECT * FROM sentiment 
-			WHERE url='{0}';""").format(url)
-		print(query)
-		sql.execute(query)
-		tuplas = sql.fetchall()
+        query = ("""SELECT * FROM sentiment 
+            WHERE url='{0}';""").format(url)
+        print(query)
+        sql.execute(query)
+        tuplas = sql.fetchall()
 
-		bbdd.close()
+        bbdd.close()
 
-		return tuplas
+        return tuplas
 
 
-	# -- get top words --
-	def get_top_words(self):
-		bbdd, sql = self.open_db()
+    # -- get top words --
+    def get_top_words(self):
+        bbdd, sql = self.open_db()
 
-		query = "SELECT * FROM top_words ORDER BY count DESC;"
-		print(query)
-		sql.execute(query)
-		tuples = sql.fetchall()
+        query = "SELECT * FROM top_words ORDER BY count DESC;"
+        print(query)
+        sql.execute(query)
+        tuples = sql.fetchall()
 
-		return tuples
+        return tuples
 
 
-	# -- get urls and sentiment --
-	def get_sentiment(self):
-		bbdd, sql = self.open_db()
+    # -- get urls and sentiment --
+    def get_sentiment(self):
+        bbdd, sql = self.open_db()
 
-		query = "SELECT * FROM sentiment;"
-		print(query)
-		sql.execute(query)
-		tuples = sql.fetchall()
+        query = "SELECT * FROM sentiment;"
+        print(query)
+        sql.execute(query)
+        tuples = sql.fetchall()
 
-		return tuples
+        return tuples
 
 
-	### HTML & TEXT FUNCTIONS ###
+    ### HTML & TEXT FUNCTIONS ###
 
-	# -- strip html and clean  page --
-	def clean_page(self, page):
-		# -- strip html --
-		h = html2text.HTML2Text()
-		text = h.handle(page).lower()
+    # -- strip html and clean  page --
+    def clean_page(self, page):
+        # -- strip html --
+        h = html2text.HTML2Text()
+        text = h.handle(page).lower()
 
-		# -- clean text and get words --
-		text = re.sub(r'\W+', ' ', text)
-		while text.find("  ") >= 0:
-			text = re.sub('  ', ' ', text)
+        # -- clean text and get words --
+        text = re.sub(r'\W+', ' ', text)
+        while text.find("  ") >= 0:
+            text = re.sub('  ', ' ', text)
 
-		print("TEXT:")
-		print(text)
+        return text 
 
-		return text 
 
+    # -- get words from text --
+    def get_words(self, text):
+        tmpwords = {}
+        finalwords = []
+        words = []
 
-	# -- get words from text --
-	def get_words(self, text):
-		tmpwords = {}
-		finalwords = []
-		words = []
+        # -- count words --
+        for i in text.split(' '):
+            if i not in tmpwords:
+                tmpwords[i] = 1
+            else:
+                tmpwords[i] += 1
 
-		# -- count words --
-		for i in text.split(' '):
-			if i not in tmpwords:
-				tmpwords[i] = 1
-			else:
-				tmpwords[i] += 1
+        # -- add to simple array and sort --
+        for i in tmpwords.keys():
+            finalwords.append([tmpwords[i], i])
 
-		# -- add to simple array and sort --
-		for i in tmpwords.keys():
-			finalwords.append([tmpwords[i], i])
+        finalwords.sort()
+        finalwords.reverse()
 
-		finalwords.sort()
-		finalwords.reverse()
+        # -- get only the first 100 words or less --
+        limit = len(finalwords)
+        if limit > 100:
+            limit = 100
 
-		# -- get only the first 100 words or less --
-		limit = len(finalwords)
-		if limit > 100:
-			limit = 100
+        for i in range(0, limit):
+            words.append(finalwords[i])
 
-		for i in range(0, limit):
-			words.append(finalwords[i])
+        return words
 
-		return words
 
+    # -- classificate word in noun, verb or something else --
+    def get_word_type(self, word):
+        word_type = ""
 
-	# -- classificate word in noun, verb or something else --
-	def get_word_type(self, word):
-		word_type = ""
+        word_token = nltk.word_tokenize(word)
+        w_type = nltk.pos_tag(word_token)
 
-		word_token = nltk.word_tokenize(word)
-		w_type = nltk.pos_tag(word_token)
+        if len(w_type) > 0:
+            if len(w_type[0]) > 1:
+                if w_type[0][1].find("NN") >= 0:
+                    word_type = "noun"
+                if w_type[0][1].find("VB") >= 0:
+                    word_type = "verb"
 
-		if len(w_type) > 0:
-			if len(w_type[0]) > 1:
-				if w_type[0][1].find("NN") >= 0:
-					word_type = "noun"
-				if w_type[0][1].find("VB") >= 0:
-					word_type = "verb"
+        return word_type
 
-		return word_type
 
+    # -- make a tag cloud image --
+    def get_word_cloud(self, text):
+        # -- create wordcloud from text --
+        wordcloud = WordCloud(max_font_size=75).generate(text)
+        plt.imshow(wordcloud, interpolation='bilinear')
+        plt.axis("off")
+        #plt.show()
+        plt.savefig('static/wordcloud.png')
 
-	# -- make a tag cloud image --
-	def get_word_cloud(self, text):
-		# -- create wordcloud from text --
-		wordcloud = WordCloud(max_font_size=75).generate(text)
-		plt.imshow(wordcloud, interpolation='bilinear')
-		plt.axis("off")
-		#plt.figure()
-		plt.show()
+        return
 
-		return
 
+    ### SUPER FUNCTIONS ###
 
-	### SUPER FUNCTIONS ###
+    # -- process web page and insert words --
+    def process_search(self, url):
+        data = []
+        data_url = []
 
-	# -- process web page and insert words --
-	def process_search(self, url, page):
-		data = []
-		data_url = []
+        # -- get url --
+        tmp = url.split("?")
+        url = tmp[0]
+        response = requests.get(url)
+        page = response.text
 
-		# -- clean page an get words --
-		print("PASA POR AQUI! 1")
-		text = self.clean_page(page)
-		words = self.get_words(text)
+        # -- clean page an get words --
+        text = self.clean_page(page)
+        words = self.get_words(text)
 
-		# -- get hashed and encrypted word and get into db --
-		for i in words:
-			word_hash = self.salted_hash(i[1]).decode()
-			encrypted_word = self.encrypt_word(i[1]).decode()
+        # -- get hashed and encrypted word and get into db --
+        for i in words:
+            word_hash = self.salted_hash(i[1]).decode()
+            encrypted_word = self.encrypt_word(i[1]).decode()
 
-			result = self.get_word(encrypted_word)
-			if len(result) == 0:
-				data.append({
-					'word_hash': word_hash,
-					'encrypted_word': encrypted_word,
-					'count': i[0]
-				})
-			else:
-				self.update_word(encrypted_word)
+            result = self.get_word(encrypted_word)
+            if len(result) == 0:
+                data.append({
+                    'word_hash': word_hash,
+                    'encrypted_word': encrypted_word,
+                    'count': i[0]
+                })
+            else:
+                self.update_word(encrypted_word)
 
-		if len(data) > 0:
-			self.insert_table(data, "top_words")
+        if len(data) > 0:
+            self.insert_table(data, "top_words")
 
-		# -- make sentiment analysis --
-		sentimet = "positive"
-		enctext = urllib.parse.quote_plus(text)
-		url = "https://api.wit.ai/message?v=20170307&verbose=true&q="+enctext
-		headers = {
-			'Authorization': 'Bearer UCRHLJFIYZ34NW67BVY32ITCI6VDSQQW',
-			'Content-Type': 'application/json'
-		}
-		response = requests.get(url, headers=headers)
-		result = response.json()
-		if 'intent' in result['entities']:
-			if 'value' in result['entities']['intent']:
-				sentiment = result['entities']['intent']['value']
+        # -- make sentiment analysis --
+        sentiment = "positive"
+        enctext = urllib.parse.quote_plus(text[0:279])
+        url = "https://api.wit.ai/message?v=20170307&verbose=true&q="+enctext
+        headers = {
+            'Authorization': 'Bearer UCRHLJFIYZ34NW67BVY32ITCI6VDSQQW',
+            'Content-Type': 'application/json'
+        }
+        response = requests.get(url, headers=headers)
+        result = response.json()
 
-		# -- store url with sentiment --
-		url_hash = self.salted_hash(url).decode()
+        if 'intent' in result['entities']:
+            if 'value' in result['entities']['intent']:
+                sentiment = result['entities']['intent']['value']
 
-		result = self.get_url(url)
-		if len(result) == 0:
-			data_url.append({
-				'url_hash': url_hash,
-				'url': url,
-				'sentiment': sentiment
-			})
-			self.insert_table(data_url, "sentiment")
-		else:
-			self.update_sentiment(sentiment, url)
+        # -- store url with sentiment --
+        url_hash = self.salted_hash(url).decode()
 
-		# ------ create wordcloud -------
+        result = self.get_url(url)
+        if len(result) == 0:
+            data_url.append({
+                'url_hash': url_hash,
+                'url': url,
+                'sentiment': sentiment
+            })
+            self.insert_table(data_url, "sentiment")
+        else:
+            self.update_sentiment(sentiment, url)
 
+        # -- create wordcloud --
+        self.get_word_cloud(text)
 
-		return words
-		
+        return
+        
 
-	# -- list words and urls on page admin --
-	def admin_data(self):
-		top_words = []
-		sentiment = []
+    # -- list words and urls on page admin --
+    def admin_data(self):
+        top_words = []
+        sentiment = []
 
-		orig_top_words = self.get_top_words()
-		sentiment = self.get_sentiment()
+        orig_top_words = self.get_top_words()
+        orig_sentiment = self.get_sentiment()
 
-		for i in orig_top_words:
-			word = self.decrypt_word(i[1]).decode()
-			if self.get_word_type(word) != "":
-				top_words.append([word, i[2]])
+        for i in orig_top_words:
+            word = self.decrypt_word(i[1]).decode()
+            if self.get_word_type(word) != "":
+                top_words.append([word, i[2]])
 
-		return {'words': top_words, 'urls': sentiment}
+        for i in orig_sentiment:
+            url = i[1]
+            if len(i[1]) > 100:
+                url = i[1][0:100]+"..."
 
+            if i[2] == 0:
+                sentiment.append(["negative", url])
+            if i[2] == 1:
+                sentiment.append(["positive", url])
 
-#if __init__ == "__main__":
-#	pass
+        return {'words': top_words, 'urls': sentiment}
+
 
 
