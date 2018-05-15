@@ -1,0 +1,28 @@
+name: app
+type: python:3.6
+
+web:
+  commands:
+    start: "app.py"
+locations:
+    "/":
+      root: ""
+      passthru: true
+      allow: false
+    "/static":
+      root: "static/"
+      allow: true
+
+hooks:
+  build: |
+    pip install tornado
+    pip install Crypto
+    pip install html2text
+    pip install nltk
+    pip install pymysql
+    pip install wordcloud
+    pip install requests
+
+relationships:
+    database: "mysqldb:mysql"
+
