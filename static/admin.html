@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>{{ title }}</title>
+</head>
+Admin Page
+<br><br>
+<table>
+<tr>
+<th>Sentiment</th>
+<th>URL</th>
+</tr>
+{% for i in items['urls'] %}
+<tr>
+<td>{{ i[2] }}</td>
+<td>{{ i[1] }}</td>
+</tr>
+{% end %}
+</table>
+
+<br><br>
+
+<table>
+<tr>
+<th>Word</th>
+<th>Count</th>
+</tr>
+{% for i in items['words'] %}
+<tr>
+<td>{{ i[0] }}</td>
+<td align="right">{{ i[1] }}</td>
+</tr>
+{% end %}
+</table>
+
+<br><br>
+
+<a href="/">Go to main page</a>
+<body>
+</body>
+</html>
